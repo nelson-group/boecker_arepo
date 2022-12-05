@@ -117,10 +117,15 @@ void cooling_and_starformation(void)
         }
 
       /* do cooling, except for gas above the EOS density threshold that is colder than the eEOS */
+      #ifndef TEST // XENO_SN
       if(dens * All.cf_a3inv < eos_dens_threshold || (dens * All.cf_a3inv >= eos_dens_threshold && SphP[i].Utherm > egyeff))
         {
           cool_cell(i);
         }
+      #endif // !TEST
+      #ifdef TEST // XENO_SN
+        cool_cell(i);
+      #endif // TEST
 
       /* check whether conditions for star formation are fulfilled.
        * f=1  normal cooling
@@ -161,10 +166,12 @@ void cooling_and_starformation(void)
                   unew = SphP[i].Utherm;
 
                   // put (cold) star forming cells on the effective equation of state
+                  #ifndef TEST // XENO_SN
                   if(SphP[i].Utherm < egyeff)
                     {
                       unew = egyeff;
                     }
+                  #endif // !TEST
 
                   du = unew - SphP[i].Utherm;
                   if(unew < All.MinEgySpec)

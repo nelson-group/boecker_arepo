@@ -166,22 +166,38 @@ int init(void)
       P[i].GravCost[j] = 0;
 
       /* set unused coordinate values in 1d and 2d simulations to zero; this is needed for correct interfaces */
+  int nonzero_vel = 0;
 #ifdef ONEDIMS
   for(i = 0; i < NumPart; i++)
     {
       P[i].Pos[1] = 0.0;
       P[i].Pos[2] = 0.0;
-      P[i].Vel[1] = 0.0;
-      P[i].Vel[2] = 0.0;
+
+      if(P[i].Vel[1] != 0.0 || P[i].Vel[2] != 0.0)
+      {
+   	    nonzero_vel = 1;
+      }
     }
+  if(nonzero_vel > 0)
+  {
+    warn("Initial y or z velocity nonzero in 1d simulation! Make sure you really want this!");
+  }
 #endif /* #ifdef ONEDIMS */
 
 #ifdef TWODIMS
   for(i = 0; i < NumPart; i++)
     {
       P[i].Pos[2] = 0;
-      P[i].Vel[2] = 0;
+
+      if(P[i].Vel[2] != 0.0)
+      {
+        nonzero_vel = 1;
+      }
     }
+  if(nonzero_vel > 0)
+  {
+	warn("Initial z velocity nonzero in 2d simulation! Make sure you really want this!");
+  }
 #endif /* #ifdef TWODIMS */
 
   if(All.ComovingIntegrationOn) /*  change to new velocity variable */
@@ -489,11 +505,8 @@ int init(void)
                         SphP[i].Volume * All.cf_atime;
 #endif /* #ifdef MHD */
 
-#ifndef AREPOVTK
-      // we use this to store other quantities
       for(j = 0; j < 3; j++)
         SphP[i].VelVertex[j] = P[i].Vel[j];
-#endif
 
       mass += P[i].Mass;
     }
@@ -546,10 +559,6 @@ int init(void)
   int xaxis, yaxis, zaxis, weight_flag = 0;
   double xmin, xmax, ymin, ymax, zmin, zmax;
 #endif /* #if !defined(ONEDIMS) && !defined(TWODIMS) */
-
-#ifdef AREPOVTK
-  return -2; // keep mesh
-#endif
 
   free_mesh();
 

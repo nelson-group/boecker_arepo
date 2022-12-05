@@ -219,3 +219,7 @@
 #--------------------------------------- Mesh-relaxing or mesh-adding (this will not carry out a simulation)
 #MESHRELAX                     # this keeps the mass constant and only regularizes the mesh
 #ADDBACKGROUNDGRID=16          # Re-grid hydrodynamics quantities on a Oct-tree AMR grid. This does not perform a simulation.
+
+#XENO_SN
+#TEST
+#SN_TIMESTEPS

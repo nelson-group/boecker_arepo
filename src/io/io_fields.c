@@ -581,6 +581,30 @@ void init_io_fields()
   init_snapshot_type(IO_SFR, SN_MINI);
 #endif /* #ifdef USE_SFR */
 
+
+#ifdef XENO_SN
+  init_field(IO_SBT, "SBT ", "StarBirthTimes", MEM_MY_SINGLE, FILE_MY_IO_FLOAT, FILE_MY_IO_FLOAT, 1, A_P, &P[0].StarBirthTime, 0, STARS_ONLY);
+  init_units(IO_SBT, 0, 0, 0, 0, 0, 0);
+  init_snapshot_type(IO_SBT, SN_MINI);
+
+  init_field(IO_SLT, "SLT ", "StarLifeTimes", MEM_MY_SINGLE, FILE_MY_IO_FLOAT, FILE_MY_IO_FLOAT, 1, A_P, &P[0].StarLifeTime, 0, STARS_ONLY);
+  init_units(IO_SLT, 0, 0, 0, 0, 0, 0);
+  init_snapshot_type(IO_SLT, SN_MINI);
+
+  init_field(IO_SE, "SE  ", "StarsExploded", MEM_INT, FILE_INT, FILE_INT, 1, A_P, &P[0].StarExploded, 0, STARS_ONLY);
+  init_units(IO_SE, 0, 0, 0, 0, 0, 0);
+  init_snapshot_type(IO_SE, SN_MINI);
+
+  init_field(IO_ESN, "ESN ", "EnergyAddedBySNe", MEM_NONE, FILE_MY_IO_FLOAT, FILE_MY_IO_FLOAT, 1, A_P, &P[0].energyAddedBySN, 0, GAS_ONLY);
+  init_units(IO_ESN, 0, 0, 0, 0, 0, 0);
+  init_snapshot_type(IO_ESN, SN_MINI);
+
+  init_field(IO_USN, "USN ", "UthermAddedBySNe", MEM_NONE, FILE_MY_IO_FLOAT, FILE_MY_IO_FLOAT, 1, A_P, &P[0].uthermAddedBySN, 0, GAS_ONLY);
+  init_units(IO_USN, 0, 0, 0, 0, 0, 0);
+  init_snapshot_type(IO_USN, SN_MINI);
+#endif
+
+
 #ifdef OUTPUT_DIVVEL
   init_field(IO_DIVVEL, "DIVV", "VelocityDivergence", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, FILE_MY_IO_FLOAT, 1, A_SPHP, &SphP[0].DivVel, 0,
              GAS_ONLY);

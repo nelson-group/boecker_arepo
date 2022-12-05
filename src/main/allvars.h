@@ -1271,6 +1271,14 @@ extern struct particle_data
   unsigned char SofteningType;
   signed char TimeBinGrav;
   signed char TimeBinHydro;
+
+#ifdef XENO_SN
+  int StarExploded;
+  float StarBirthTime;
+  float StarLifeTime;
+  float energyAddedBySN;
+  float uthermAddedBySN;
+#endif  // XENO_SN
 } * P,              /*!< holds particle data on local processor */
     *DomainPartBuf; /*!< buffer for particle data used in domain decomposition */
 
@@ -1677,6 +1685,13 @@ enum iofields
   IO_NE,
   IO_NH,
   IO_SFR,
+#ifdef XENO_SN
+  IO_SBT,
+  IO_SLT,
+  IO_SE,
+  IO_ESN,
+  IO_USN,
+#endif
 
   IO_POT,
   IO_ACCEL,

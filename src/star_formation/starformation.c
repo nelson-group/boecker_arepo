@@ -295,6 +295,11 @@ void convert_cell_into_star(int i, double birthtime)
 {
   P[i].Type          = 4;
   P[i].SofteningType = All.SofteningTypeOfPartType[P[i].Type];
+  printf("\nconvert cell into star, setup now:");
+#ifdef XENO_SN
+  printf("\nXENO_SN is active: SetupNewStarIsCalledNow");
+  SetupNewStar(i);
+#endif
 
 #if defined(REFINEMENT_HIGH_RES_GAS)
   if(SphP[i].HighResMass < HIGHRESMASSFAC * P[i].Mass)
@@ -339,6 +344,10 @@ void spawn_star_from_cell(int igas, double birthtime, int istar, MyDouble mass_o
   P[istar].Type          = 4;
   P[istar].SofteningType = All.SofteningTypeOfPartType[P[istar].Type];
   P[istar].Mass          = mass_of_star;
+
+#ifdef XENO_SN
+  SetupNewStar(istar);
+#endif
 
 #if defined(REFINEMENT_HIGH_RES_GAS)
   if(SphP[igas].HighResMass < HIGHRESMASSFAC * P[igas].Mass)

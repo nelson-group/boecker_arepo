@@ -904,22 +904,22 @@ int FindTriangle(tessellation *T, int tt, int pp, int *degnerate_flag, int *next
   if(flag1 < 0)
     {
       if(ind < 0)
-        ind = 0;
+        ind = 1;
       else
         {
           if(get_random_number() < 0.5)
-            ind = 0;
+            ind = 1;
         }
     }
 
   if(flag2 < 0)
     {
       if(ind < 0)
-        ind = 0;
+        ind = 2;
       else
         {
           if(get_random_number() < 0.5)
-            ind = 0;
+            ind = 2;
         }
     }
 

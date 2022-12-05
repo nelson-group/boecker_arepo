@@ -429,10 +429,8 @@ void domain_free(void)
  */
 void domain_printf(char *buf)
 {
-#ifndef AREPOVTK
   if(RestartFlag <= 2)
     fprintf(FdDomain, "%s", buf);
-#endif
 }
 
 /*! \brief Function that reports load-balancing

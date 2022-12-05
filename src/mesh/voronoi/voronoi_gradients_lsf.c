@@ -469,10 +469,6 @@ void compute_divergences()
       MyFloat *BOther, B[3];
       struct grad_data *GradOther;
 #endif /* #ifdef MHD */
-#if defined(EVALPOTENTIAL)
-      SphP[i].PotentialPeak = 1; /* starts off true */
-      double PotenOther;
-#endif /* #if defined(EVALPOTENTIAL) */
 
       int q = SphP[i].first_connection;
       while(q >= 0)
@@ -538,9 +534,6 @@ void compute_divergences()
                   GradOther = &SphP[particle].Grad;
                   BOther    = SphP[particle].B;
 #endif /* #ifdef MHD */
-#if defined(EVALPOTENTIAL)
-                  PotenOther = P[particle].Potential;
-#endif /* #if defined(EVALPOTENTIAL) */
                 }
               else
                 {
@@ -552,9 +545,6 @@ void compute_divergences()
                   GradOther = &GradExch[particle];
                   BOther    = PrimExch[particle].B;
 #endif /* #ifdef MHD */
-#if defined(EVALPOTENTIAL)
-                  PotenOther = PrimExch[particle].Potential;
-#endif /* #if defined(EVALPOTENTIAL) */
                 }
 
 #ifdef MHD

@@ -69,9 +69,6 @@ int TimerStackPos = 0;
  */
 void open_logfiles(void)
 {
-#ifdef AREPOVTK
-  return;
-#endif
   char mode[2], buf[1000], msg[1000];
 
   if(RestartFlag == 0)
@@ -215,9 +212,6 @@ void open_logfiles(void)
  */
 void close_logfiles(void)
 {
-#ifdef AREPOVTK
-  return;
-#endif
   if(ThisTask != 0) /* only the root processors writes to the log files */
     return;
 
@@ -248,9 +242,6 @@ void close_logfiles(void)
  */
 void output_log_messages(void)
 {
-#ifdef AREPOVTK
-  return;
-#endif
   double z;
   int i, j, write_logs = 1;
   double sum, avg_CPU_TimeBin[TIMEBINS], frac_CPU_TimeBin[TIMEBINS];
@@ -474,9 +465,6 @@ void init_cpu_log(void)
  */
 void write_cpu_log(void)
 {
-#ifdef AREPOVTK
-  return;
-#endif
   int write_logs = 1;
   double max_CPU_Step[CPU_LAST], avg_CPU_Step[CPU_LAST], summed_CPU_Step[CPU_LAST];
   double t0, t1, tsum;

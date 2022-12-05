@@ -598,7 +598,7 @@ hid_t my_H5Pcreate(hid_t class_id);
 herr_t my_H5Pclose(hid_t plist);
 herr_t my_H5Pset_chunk(hid_t plist, int ndims, const hsize_t *dim);
 herr_t my_H5Pset_shuffle(hid_t plist_id);
-herr_t my_H5Pset_deflate(hid_t plist_id, uint level);
+herr_t my_H5Pset_deflate(hid_t plist_id, unsigned int level);
 herr_t my_H5Pset_fletcher32(hid_t plist_id);
 #endif /* #ifdef HDF5_FILTERS */
 
@@ -661,5 +661,10 @@ void convert_cell_into_star(int i, double birthtime);
 void spawn_star_from_cell(int igas, double birthtime, int istar, MyDouble mass_of_star);
 void make_star(int idx, int i, double prob, MyDouble mass_of_star, double *sum_mass_stars);
 #endif /* #ifdef USE_SFR */
+
+#ifdef XENO_SN
+void SetupNewStar(int i);
+void ExplodeAllDyingStars();
+#endif  // XENO_SN
 
 #endif /* #ifndef PROTO_H */

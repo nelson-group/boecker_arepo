@@ -77,6 +77,11 @@
 #include "../main/allvars.h"
 #include "../main/proto.h"
 
+/* needs to be included after allvars.h */
+#ifdef OUTPUT_XDMF
+#include <libgen.h> /* for basename() function */
+#endif /* #ifdef OUTPUT_XDMF */
+
 #include "../fof/fof.h"
 #include "../gitversion/version.h"
 #include "../mesh/voronoi/voronoi.h"
@@ -92,6 +97,10 @@ void write_dataset_attributes(hid_t hdf5_dataset, enum iofields blocknr);
 #ifdef TOLERATE_WRITE_ERROR
 static char alternative_fname[MAXLEN_PATH];
 #endif /* #ifdef TOLERATE_WRITE_ERROR */
+
+#ifdef OUTPUT_XDMF
+static void write_xdmf(char *fname);
+#endif /* #ifdef OUTPUT_XDMF */
 
 static int n_type[NTYPES]; /**< contains the local (for a single task) number of particles of each type in the snapshot file */
 static long long ntot_type_all[NTYPES]; /**< contains the global number of particles of each type in the snapshot file */
@@ -1921,7 +1930,7 @@ void write_dataset_attributes(hid_t hdf5_dataset, enum iofields blocknr)
  *
  *  \return void
  */
-void write_xdmf(char *fname)
+static void write_xdmf(char *fname)
 {
   FILE *f;
   char buf[256], buf2[256];
@@ -1945,8 +1954,9 @@ void write_xdmf(char *fname)
   fprintf(f, "<Xdmf Version=\"2.0\">\n");
   fprintf(f, " <Domain>");
 
-  sprintf(buf, "%s.hdf5", fname);
-
+  /* hdf5 file path relative to xmf file, uses basename function of libgen.h,
+   * i.e. POSIX version of basename() */
+  sprintf(buf, "./%s.hdf5", basename(fname));
   int type = 0;
   for(; type < NTYPES; type++)
     {
@@ -1998,7 +2008,7 @@ void write_xdmf(char *fname)
                                 {
                                   fprintf(f, "   <Attribute Name=\"%s\" AttributeType=\"Vector\" Center=\"Node\">\n", buf2);
                                   fprintf(f,
-                                          "    <DataItem Dimensions=\"%d\ 3\" NumberType=\"Float\" Precision=\"%d\" Format=\"HDF\">\n",
+                                          "    <DataItem Dimensions=\"%d 3\" NumberType=\"Float\" Precision=\"%d\" Format=\"HDF\">\n",
                                           header.npart[type], prec);
                                 }
 

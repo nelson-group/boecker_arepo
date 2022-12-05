@@ -85,7 +85,7 @@
  *  \param[in] st_R Right hand side state.
  *  \param[out] st_face State at face.
  *
- *  \return Central pressure.
+ *  \return 0.
  */
 double godunov_flux_3d(struct state *st_L, struct state *st_R, struct state_face *st_face)
 {

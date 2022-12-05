@@ -391,6 +391,10 @@ void calculate_non_standard_physics_prior_mesh_construction(void)
  */
 void calculate_non_standard_physics_end_of_step(void)
 {
+#ifdef XENO_SN
+  ExplodeAllDyingStars();
+#endif  // XENO_SN
+
 #ifdef COOLING
 #ifdef USE_SFR
   cooling_and_starformation();

@@ -274,7 +274,6 @@ void determine_compute_nodes(void)
 
   MPI_Allgather(&loc_node, sizeof(struct node_data), MPI_BYTE, list_of_nodes, sizeof(struct node_data), MPI_BYTE, MPI_COMM_WORLD);
 
-#ifndef AREPOVTK
   if(ThisTask == 0)
     {
       FILE *fd;
@@ -284,7 +283,6 @@ void determine_compute_nodes(void)
         fprintf(fd, "%5d  %s\n", list_of_nodes[i].task, list_of_nodes[i].name);
       fclose(fd);
     }
-#endif
 
   qsort(list_of_nodes, NTask, sizeof(struct node_data), system_compare_hostname);
 
@@ -793,9 +791,6 @@ int myflush(FILE *fstream)
  */
 int flush_everything(void)
 {
-#ifdef AREPOVTK
-  return 1;
-#endif
 #ifndef REDUCE_FLUSH
   return 0;
 #else  /* #ifndef REDUCE_FLUSH */
@@ -1138,10 +1133,8 @@ void check_maxmemsize_setting(void)
 
   MPI_Allreduce(&errflag, &errflag_tot, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 #ifndef __OSX__
-#ifndef AREPOVTK
   if(errflag_tot)
     mpi_terminate("Not enough memory error!");
-#endif
 #endif /* #ifndef __OSX__ */
 }
 
