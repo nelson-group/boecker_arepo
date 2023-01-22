@@ -221,5 +221,6 @@
 #ADDBACKGROUNDGRID=16          # Re-grid hydrodynamics quantities on a Oct-tree AMR grid. This does not perform a simulation.
 
 #XENO_SN
-#TEST
+#MOMENTUM_SN
+#FAKE_SN_PRESSURE_OFF
 #SN_TIMESTEPS

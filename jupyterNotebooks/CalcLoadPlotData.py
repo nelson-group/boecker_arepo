@@ -31,30 +31,54 @@ UnitTime_in_yr = UnitTime_in_s * sec_to_yr
 UnitDensity_in_cgs = UnitMass_in_g / UnitLength_in_cm**3
 
 
+boxSize = 96
+frameAmount = 40
+frameNbrMultiplier = 10
+TimeBetSnapshot_in_unit_time = 0.002
+
+def GetParameters():
+    print("boxSize = "+ str(boxSize) +" \nframeAmount = "+ str(frameAmount) +" \nframeNbrMultiplier = "+ str(frameNbrMultiplier) +" \nTimeBetSnapshot_in_unit_time = "+ str(TimeBetSnapshot_in_unit_time))
+    
+def SetParameters(_boxSize = -1, _frameAmount = -1, _frameNbrMultiplier = -1, _TimeBetSnapshot_in_unit_time = -1):
+    if(_boxSize != -1):
+        global boxSize 
+        boxSize  = _boxSize
+    if(_frameAmount != -1):
+        global frameAmount 
+        frameAmount  = _frameAmount
+    if(_frameNbrMultiplier != -1):
+        global frameNbrMultiplier 
+        frameNbrMultiplier  = _frameNbrMultiplier
+    if(_TimeBetSnapshot_in_unit_time != -1):
+        global TimeBetSnapshot_in_unit_time 
+        TimeBetSnapshot_in_unit_time  = _TimeBetSnapshot_in_unit_time
 
 
 def GetUnitSystem():
     print("UnitVelocity_in_cm_per_s = "+ str(UnitVelocity_in_cm_per_s) +" \nUnitLength_in_cm = "+ str(UnitLength_in_cm) +" \nUnitMass_in_g = "+ str(UnitMass_in_g))
     
 
-def SetUnitSystem(vel, length, mass):
-    global UnitVelocity_in_cm_per_s 
-    UnitVelocity_in_cm_per_s  = vel
-    global UnitVelocity_in_km_per_s
-    UnitVelocity_in_km_per_s = UnitVelocity_in_cm_per_s / 1e5
-    
-    global UnitLength_in_cm 
-    UnitLength_in_cm = length
-    global UnitLength_in_pc
-    UnitLength_in_pc = UnitLength_in_cm / 3.085678e18
-    global UnitLength_in_kpc
-    UnitLength_in_kpc = UnitLength_in_pc / 1000
-    
-    global UnitMass_in_g
-    UnitMass_in_g = mass
-    global UnitMass_in_Msun
-    UnitMass_in_Msun = UnitMass_in_g / 1.989e33
-    
+def SetUnitSystem(_UnitVelocity_in_cm_per_s = -1, _UnitLength_in_cm = -1, _UnitMass_in_g = -1):
+    if(_UnitVelocity_in_cm_per_s != -1):
+        global UnitVelocity_in_cm_per_s 
+        UnitVelocity_in_cm_per_s  = _UnitVelocity_in_cm_per_s
+        global UnitVelocity_in_km_per_s
+        UnitVelocity_in_km_per_s = UnitVelocity_in_cm_per_s / 1e5
+
+    if(_UnitLength_in_cm != -1):
+        global UnitLength_in_cm 
+        UnitLength_in_cm = _UnitLength_in_cm
+        global UnitLength_in_pc
+        UnitLength_in_pc = UnitLength_in_cm / 3.085678e18
+        global UnitLength_in_kpc
+        UnitLength_in_kpc = UnitLength_in_pc / 1000
+
+    if(_UnitMass_in_g != -1):
+        global UnitMass_in_g
+        UnitMass_in_g = _UnitMass_in_g
+        global UnitMass_in_Msun
+        UnitMass_in_Msun = UnitMass_in_g / 1.989e33
+
     global UnitEnergy_in_erg
     UnitEnergy_in_erg = UnitMass_in_g * UnitVelocity_in_cm_per_s**2
     global UnitTime_in_s
@@ -168,7 +192,7 @@ def getTemperaturesInKelvin(folder, timeStep, debugOn = False):
 
 # Usefull stuff
 
-def getRadialDistances(folder, timeStep, boxSize):
+def getRadialDistances(folder, timeStep):
     coos = LoadDataFromHDF(folder, timeStep, "Coordinates")
     radDirs = coos - np.full(3,boxSize/2)
     radDirsNorm = np.sqrt((radDirs*radDirs).sum(axis=1))

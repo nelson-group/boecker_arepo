@@ -41,9 +41,9 @@
 
 float starLifeTime = 10 * 1e6 * 365 * 24 * 60 * 60; // 10 million years in seconds
 
-double sunMass    = 1.989e33;
+double sunMass_in_g    = 1.989e33;
 double snePerMSun = 0.01;
-double percentageMassEjected = 0.2;
+double massEjectedPerSN_in_g  = 1.989e33;
 double snEnergyToInputInErgs     = 1e51;
 int amountofcellstodepositenergy = 8;
 
@@ -82,7 +82,6 @@ void CommunicateClosestCellsOfAllTasks();
 
 void FindAllTaskClosestCellsOnThisTask();
 
-void AddEnergyToCell(int i, double energyToAddInCodeUnits, MyDouble massOfStar);
 void AddEnergyAndMassToAllTasksClosestCells();
 
 void SetAllParticlesTimeStepToSmallestTimestep();
@@ -200,7 +199,7 @@ void SetupNewStar(int i)
 {
   //printf("Setup new Star");
   P[i].StarBirthTime = All.Ti_Current * All.Timebase_interval * All.UnitTime_in_s;
-  P[i].StarLifeTime = starLifeTime;
+  P[i].StarLifeTime = starLifeTime * get_random_number_aux();
   P[i].StarExploded = 0;
 }
 
@@ -238,8 +237,6 @@ void ExplodeAllDyingStars()
 
         AddEnergyAndMassToAllTasksClosestCells(currentSNIndex);
     }
-
-    // SetAllParticlesTimeStepToSmallestTimestep();
 
     #ifdef SN_TIMESTEPS
     adjust_timestep_of_all_particles_to_next_sn();
@@ -466,18 +463,48 @@ void FindAllTaskClosestCellsOnThisTask(){
         }
 }
 
-double ErgToCodeUnits(double energyInErg){
-  double conversionErgToCodeunits = All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s;
-  return energyInErg / conversionErgToCodeunits;
+int GetSNAmount(int starParticleIndex){
+  double numberOfSNe = P[starParticleIndex].Mass * All.UnitMass_in_g / sunMass_in_g * snePerMSun;
+  return (int)numberOfSNe;
 }
 
-void AddEnergyToCell(int i, MyDouble massOfStar){
-  double energyToAddInCodeUnits = 0;
-  double totalEnergyToAddInCodeUnits = ErgToCodeUnits(snEnergyToInputInErgs) / (SphP[i].OldMass * All.UnitMass_in_g);
-  double energyToAddToOneCellInCodeUnits = totalEnergyToAddInCodeUnits / amountofcellstodepositenergy;
-  int numberOfSNe = (int) (massOfStar / sunMass * snePerMSun);
-  energyToAddInCodeUnits *= numberOfSNe;
+void AddMomentumToCell(int i, int starParticleIndex){
+  int numberOfSNe = GetSNAmount(starParticleIndex);
 
+  MyFloat cellDensity = SphP[i].Density;
+  double snMomentumToInput_in_msun_km_per_s = pow(10, -0.1 * cellDensity * cellDensity + 0.245 * cellDensity + 6.1); // from fitted function of cluster simulations
+
+  double totalMomentumToAddInCodeUnits = snMomentumToInput_in_msun_km_per_s * sunMass_in_g / All.UnitMass_in_g * 1000 / All.UnitVelocity_in_cm_per_s;
+  double momentumToAddInCodeUnits = totalMomentumToAddInCodeUnits / amountofcellstodepositenergy;
+
+  momentumToAddInCodeUnits *= numberOfSNe;
+
+  double velocityToAddInCodeUnits = momentumToAddInCodeUnits / P[i].Mass;
+
+  int dir[3];
+  for (int j=0;j<3;j++){
+    dir[j] = P[i].Pos[j] - P[starParticleIndex].Pos[j];
+  }
+  float magnitude = 0;
+  for (int j = 0; j < 3; j++) {
+      magnitude += dir[j] * dir[j];
+  }
+  magnitude = sqrt(magnitude);
+
+  for (int j = 0; j < 3; j++) {
+      dir[j] = dir[j] / magnitude;
+      P[i].Vel[j] += dir[j] * velocityToAddInCodeUnits;
+  }
+
+}
+
+void AddEnergyToCell(int i, int starParticleIndex){
+  int numberOfSNe = GetSNAmount(starParticleIndex);
+
+  double totalEnergyToAddInCodeUnits = snEnergyToInputInErgs / All.UnitEnergy_in_cgs / P[i].Mass;
+  double energyToAddInCodeUnits = totalEnergyToAddInCodeUnits / amountofcellstodepositenergy;
+
+  energyToAddInCodeUnits *= numberOfSNe;
   P[i].energyAddedBySN += All.cf_atime * All.cf_atime * energyToAddInCodeUnits * P[i].Mass;
   P[i].uthermAddedBySN += energyToAddInCodeUnits;
   SphP[i].Utherm += energyToAddInCodeUnits;
@@ -487,9 +514,11 @@ void AddEnergyToCell(int i, MyDouble massOfStar){
 }
 
 void AddMassToCell(int i, int starParticleIndex){
-  MyDouble massEjected = P[starParticleIndex].Mass * percentageMassEjected / amountofcellstodepositenergy;
-  SphP[i].OldMass += massEjected;
-  P[starParticleIndex].Mass -= massEjected;
+  int numberOfSNe = GetSNAmount(starParticleIndex);
+  MyDouble totalMassEjected = numberOfSNe * massEjectedPerSN_in_g / All.UnitMass_in_g;
+  MyDouble massToAddToThisCell = totalMassEjected / amountofcellstodepositenergy;
+  SphP[i].OldMass += massToAddToThisCell;
+  P[starParticleIndex].Mass -= massToAddToThisCell;
 }
 
 void AddEnergyAndMassToAllTasksClosestCells(int currentSNIndex){
@@ -503,16 +532,13 @@ void AddEnergyAndMassToAllTasksClosestCells(int currentSNIndex){
               
             int closestCellIndex = closestCellIndices[i];
 
-            AddEnergyToCell(closestCellIndex, P[starParticleIndex].Mass);
+#ifdef MOMENTUM_SN
+            AddMomentumToCell(closestCellIndex, starParticleIndex);
+#else
+            AddEnergyToCell(closestCellIndex, starParticleIndex);
+#endif
             AddMassToCell(closestCellIndex, starParticleIndex);
         }
-}
-
-void SetAllParticlesTimeStepToSmallestTimestep(){
-  for(int i = 0; i < NumPart; i++)
-    {
-      P[i].TimeBinHydro = 0;
-    }
 }
 
 #pragma endregion

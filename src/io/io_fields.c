@@ -595,11 +595,11 @@ void init_io_fields()
   init_units(IO_SE, 0, 0, 0, 0, 0, 0);
   init_snapshot_type(IO_SE, SN_MINI);
 
-  init_field(IO_ESN, "ESN ", "EnergyAddedBySNe", MEM_NONE, FILE_MY_IO_FLOAT, FILE_MY_IO_FLOAT, 1, A_P, &P[0].energyAddedBySN, 0, GAS_ONLY);
+  init_field(IO_ESN, "ESN ", "EnergyAddedBySNe", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, FILE_NONE, 1, A_P, &P[0].energyAddedBySN, 0, GAS_ONLY);
   init_units(IO_ESN, 0, 0, 0, 0, 0, 0);
   init_snapshot_type(IO_ESN, SN_MINI);
 
-  init_field(IO_USN, "USN ", "UthermAddedBySNe", MEM_NONE, FILE_MY_IO_FLOAT, FILE_MY_IO_FLOAT, 1, A_P, &P[0].uthermAddedBySN, 0, GAS_ONLY);
+  init_field(IO_USN, "USN ", "UthermAddedBySNe", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, FILE_NONE, 1, A_P, &P[0].uthermAddedBySN, 0, GAS_ONLY);
   init_units(IO_USN, 0, 0, 0, 0, 0, 0);
   init_snapshot_type(IO_USN, SN_MINI);
 #endif
