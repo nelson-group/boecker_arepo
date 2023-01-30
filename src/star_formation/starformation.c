@@ -297,7 +297,7 @@ void convert_cell_into_star(int i, double birthtime)
   P[i].SofteningType = All.SofteningTypeOfPartType[P[i].Type];
   printf("\nconvert cell into star, setup now:");
 #ifdef XENO_SN
-  printf("\nXENO_SN is active: SetupNewStarIsCalledNow");
+  // printf("\nXENO_SN is active: SetupNewStarIsCalledNow\n");
   SetupNewStar(i);
 #endif
 

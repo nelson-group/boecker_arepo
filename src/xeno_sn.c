@@ -41,16 +41,17 @@
 
 float starLifeTime = 10 * 1e6 * 365 * 24 * 60 * 60; // 10 million years in seconds
 
+double massOfProton_in_g = 1.67e-24;
 double sunMass_in_g    = 1.989e33;
 double snePerMSun = 0.01;
 double massEjectedPerSN_in_g  = 1.989e33;
 double snEnergyToInputInErgs     = 1e51;
+double snMomentumToInput_in_msun_km_per_s = 5e5;
 int amountofcellstodepositenergy = 8;
 
 int N_explosions = 0;
 int allTasks_N_explosions = 0;
-int thisTaskSNStarParticleIndices[100000];
-int allTasks_SNStarParticleIndices[100000];
+MyDouble allTasks_SNStarParticleMasses[100000];
 float thisTaskSNPositions[1000000][3]; // space for maxSNCountPerTimestep SNe on every task
 float allTasks_SN_positions[1000000][3];
 int maxSNCountPerTimestep = 1000000;
@@ -68,13 +69,14 @@ int IsExistingStarParticle(int i);
 int IsLivingStar(int i);
 int SNHappened();
 void ExplodeStar(int i);
+int GetSNAmount(MyDouble starParticleMass);
 void GetSNCountAndPositionsOnThisTask();
 
 void CommunicateSNCountsAmongAllTasks();
 
 void SetAllGasCellsActive();
 
-void CommunicateSNPositionsAndStarParticleIndicesAmongAllTasks();
+void CommunicateSNPositionsAndStarParticleMassesAmongAllTasks();
 
 void FindClosestCellsOnThisTask(int currentSNIndex);
 
@@ -200,7 +202,7 @@ void SetupNewStar(int i)
   //printf("Setup new Star");
   P[i].StarBirthTime = All.Ti_Current * All.Timebase_interval * All.UnitTime_in_s;
   P[i].StarLifeTime = starLifeTime * get_random_number_aux();
-  P[i].StarExploded = 0;
+  P[i].snCount = 0;
 }
 
 void ExplodeAllDyingStars()
@@ -224,7 +226,7 @@ void ExplodeAllDyingStars()
 
     // SetAllGasCellsActive();
 
-    CommunicateSNPositionsAndStarParticleIndicesAmongAllTasks();
+    CommunicateSNPositionsAndStarParticleMassesAmongAllTasks();
 
     // find closest cells of all task and deposit energy for each SN that happened this timestep
     for(int currentSNIndex = 0; currentSNIndex < allTasks_N_explosions; currentSNIndex++)
@@ -251,7 +253,7 @@ int IsLivingStar(int i){
         return 0;         /* skip cells that have been swallowed or eliminated */
     if (P[i].Type != 4)  // skip non star cells
         return 0;
-    if(P[i].StarExploded == 1)
+    if(P[i].snCount != 0)
         return 0;
     //TODO: check if star is actually active --> skip ( return 0)
 
@@ -264,7 +266,7 @@ int SNHappened(){
         if(allTasksCounts[i] > 0) allTasks_N_explosions += allTasksCounts[i];
     }
 
-    if(allTasks_N_explosions > 0) printf("\nallTasks_N_explosions = %d", allTasks_N_explosions);
+    if(allTasks_N_explosions > 0 && ThisTask == 0) printf("\nallTasks_N_explosions = %d", allTasks_N_explosions);
 
     if(allTasks_N_explosions == 0) return 0;
 
@@ -277,12 +279,12 @@ void ExplodeStar(int i){
     // add new SN position into new array
     for(int j = 0; j < 3; j++){
         thisTaskSNPositions[N_explosions][j] = P[i].Pos[j];
-        thisTaskSNStarParticleIndices[N_explosions] = i;
+        thisTaskSNStarParticleMasses[N_explosions] = P[i].Mass;
     }
 
     N_explosions++;
 
-    P[i].StarExploded         = 1;
+    P[i].snCount         = GetSNAmount(P[i].Mass);
 
     //printf("\n\n\n\n\nexplode!\n\n\n");
 }
@@ -332,17 +334,17 @@ void SetAllGasCellsActive()
   TimeBinsHydro.NActiveParticles = NumGas;
 }
 
-void CommunicateSNPositionsAndStarParticleIndicesAmongAllTasks(){
+void CommunicateSNPositionsAndStarParticleMassesAmongAllTasks(){
   for(int i = 0; i < maxSNCountPerTimestep; i++){
       for(int j=0; j<3; j++){
           allTasks_SN_positions[i][j] = 0;
       }
-      allTasks_SNStarParticleIndices[i] = 0;
+      allTasks_SNStarParticleMasses[i] = 0;
   }
 
   // communicate SN positions among all tasks
   float SN_positions[allTasks_N_explosions][3];
-  int SNStarParticleIndices[allTasks_N_explosions];
+  MyDouble SNStarParticleMasses[allTasks_N_explosions];
 
   int thisTaskFirstSNIndex = 0;
   for(int i = 0; i < ThisTask; i++){
@@ -355,12 +357,16 @@ void CommunicateSNPositionsAndStarParticleIndicesAmongAllTasks(){
           if(i >= thisTaskFirstSNIndex && i < thisTaskFirstSNIndex + N_explosions) SN_positions[i][j] = thisTaskSNPositions[i - thisTaskFirstSNIndex][j];
           else SN_positions[i][j] = 0;
       }
-      if(i >= thisTaskFirstSNIndex && i < thisTaskFirstSNIndex + N_explosions) SNStarParticleIndices[i] = thisTaskSNStarParticleIndices[i - thisTaskFirstSNIndex];
-      else SNStarParticleIndices[i] = 0;
+      if(i >= thisTaskFirstSNIndex && i < thisTaskFirstSNIndex + N_explosions){
+        SNStarParticleMasses[i] = thisTaskSNStarParticleMasses[i - thisTaskFirstSNIndex];
+      }
+      else {
+        SNStarParticleMasses[i] = 0;
+      }
   }
 
   MPI_Allreduce(&SN_positions, &allTasks_SN_positions, allTasks_N_explosions * 3, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&SNStarParticleIndices, &allTasks_SNStarParticleIndices, allTasks_N_explosions, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&SNStarParticleMasses, &allTasks_SNStarParticleMasses, allTasks_N_explosions, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 }
 
 void FindClosestCellsOnThisTask(int currentSNIndex){
@@ -463,27 +469,88 @@ void FindAllTaskClosestCellsOnThisTask(){
         }
 }
 
-int GetSNAmount(int starParticleIndex){
-  double numberOfSNe = P[starParticleIndex].Mass * All.UnitMass_in_g / sunMass_in_g * snePerMSun;
+int GetSNAmount(MyDouble starParticleMass){
+  double numberOfSNe = starParticleMass * All.UnitMass_in_g / sunMass_in_g * snePerMSun;
   return (int)numberOfSNe;
 }
 
-void AddMomentumToCell(int i, int starParticleIndex){
-  int numberOfSNe = GetSNAmount(starParticleIndex);
+void AddScaledMomentumToCell(int i, MyDouble starParticleMass, currentSNIndex){
 
-  MyFloat cellDensity = SphP[i].Density;
-  double snMomentumToInput_in_msun_km_per_s = pow(10, -0.1 * cellDensity * cellDensity + 0.245 * cellDensity + 6.1); // from fitted function of cluster simulations
+if(P[i].Mass == 0){
+  printf("SN in gas with no mass");
+  return;
+}
 
-  double totalMomentumToAddInCodeUnits = snMomentumToInput_in_msun_km_per_s * sunMass_in_g / All.UnitMass_in_g * 1000 / All.UnitVelocity_in_cm_per_s;
+  int numberOfSNe = GetSNAmount(starParticleMass);
+  MyFloat logNSNe = log10(numberOfSNe);
+
+  double cellNumberDensity_in_cgs = SphP[i].Density * All.UnitMass_in_g / (All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s) / (All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s) / (All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s)  / massOfProton_in_g;
+  printf("UnitDensity: %g * UnitMassInG: %g / pow(3, UnitVelIncms: %g * UnitTimeInS: %g) / protonmass: %g\n = cellNumberDensity_in_cgs: %g\n", SphP[i].Density, All.UnitMass_in_g, All.UnitVelocity_in_cm_per_s, All.UnitTime_in_s, massOfProton_in_g, cellNumberDensity_in_cgs);
+printf("pow(3, UnitVelIncms * UnitTimeInS) =  %g\n", SphP[i].Density * All.UnitMass_in_g /(All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s) / (All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s) / (All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s));
+  MyFloat logcellNumberDensity_in_cgs = log10(cellNumberDensity_in_cgs);
+  double snMomentumToInput_in_msun_km_per_s = pow(10, -0.126 * logcellNumberDensity_in_cgs * logcellNumberDensity_in_cgs + 0.282 * logcellNumberDensity_in_cgs + 0.609 * logNSNe + 5.463); // from fitted function of cluster simulations
+
+  double totalMomentumToAddInCodeUnits = snMomentumToInput_in_msun_km_per_s * sunMass_in_g / All.UnitMass_in_g * 1e5 / All.UnitVelocity_in_cm_per_s;
   double momentumToAddInCodeUnits = totalMomentumToAddInCodeUnits / amountofcellstodepositenergy;
-
-  momentumToAddInCodeUnits *= numberOfSNe;
 
   double velocityToAddInCodeUnits = momentumToAddInCodeUnits / P[i].Mass;
 
+  // print density if not in range of cluster runs, and set it in range
+  // same with velocity > 1000: print out everything
+  // terminate there and see what happened (BG grid? low mass)
+
+  printf("numberOfSNe: %d, numberDensity: %g, totalMomentumToAddInCodeUnits: %g, cellMass: %g, velocityToAddInCodeUnits: %g  \n", numberOfSNe, cellNumberDensity_in_cgs, totalMomentumToAddInCodeUnits, P[i].Mass, velocityToAddInCodeUnits);
+  
+
   int dir[3];
   for (int j=0;j<3;j++){
-    dir[j] = P[i].Pos[j] - P[starParticleIndex].Pos[j];
+    dir[j] = P[i].Pos[j] - allTasks_SN_positions[currentSNIndex][j];
+  }
+  MyFloat magnitude = 0;
+  for (int j = 0; j < 3; j++) {
+      magnitude += dir[j] * dir[j];
+      printf("magnitude[%d]: %g\n", j, magnitude);
+  }
+  printf("sqrmagnitude: %g\n", magnitude);
+  magnitude = sqrt(magnitude);
+
+  for (int j = 0; j < 3; j++) {
+      printf("before: dir[%d]: %g\n", j, dir[j]);
+  }
+  printf("magnitude: %g\n", magnitude);
+
+  printf("Velocity before: x=%g, y=%g, z=%g\n", P[i].Vel[0], P[i].Vel[1], P[i].Vel[2]);
+
+  for (int j = 0; j < 3; j++) {
+      dir[j] = dir[j] / magnitude;
+      printf("dir[%d]: %g\n", j, dir[j]);
+      P[i].Vel[j] += dir[j] * velocityToAddInCodeUnits;
+  }
+  printf("Velocity after: x=%g, y=%g, z=%g\n", P[i].Vel[0], P[i].Vel[1], P[i].Vel[2]);
+terminate("asfasfd");
+}
+
+void AddFlatMonentumToCell(int i, MyDouble starParticleMass, int currentSNIndex) {
+  int numberOfSNe = GetSNAmount(starParticleMass);
+
+  double totalMomentumToAddInCodeUnits = snMomentumToInput_in_msun_km_per_s * sunMass_in_g / All.UnitMass_in_g * 1e5 / All.UnitVelocity_in_cm_per_s;
+  double momentumToAddInCodeUnits = totalMomentumToAddInCodeUnits / amountofcellstodepositenergy;
+
+  double velocityToAddInCodeUnits = momentumToAddInCodeUnits / P[i].Mass;
+
+  velocityToAddInCodeUnits *= numberOfSNe;
+
+  // print density if not in range of cluster runs, and set it in range
+  // same with velocity > 1000: print out everything
+  // terminate there and see what happened (BG grid? low mass)
+
+  printf("numberOfSNe: %d", numberOfSNe);
+  printf("totalMomentumToAddInCodeUnits: %g \n", totalMomentumToAddInCodeUnits);
+  printf("velocityToAddInCodeUnits: %g \n", velocityToAddInCodeUnits);
+
+  int dir[3];
+  for (int j=0;j<3;j++){
+    dir[j] = P[i].Pos[j] - allTasks_SN_positions[currentSNIndex][j];
   }
   float magnitude = 0;
   for (int j = 0; j < 3; j++) {
@@ -491,15 +558,42 @@ void AddMomentumToCell(int i, int starParticleIndex){
   }
   magnitude = sqrt(magnitude);
 
+  printf("Velocity before: x=%g, y=%g, z=%g\n", P[i].Vel[0], P[i].Vel[1], P[i].Vel[2]);
+
   for (int j = 0; j < 3; j++) {
       dir[j] = dir[j] / magnitude;
       P[i].Vel[j] += dir[j] * velocityToAddInCodeUnits;
   }
+  printf("Velocity after: x=%g, y=%g, z=%g\n", P[i].Vel[0], P[i].Vel[1], P[i].Vel[2]);
 
 }
 
-void AddEnergyToCell(int i, int starParticleIndex){
-  int numberOfSNe = GetSNAmount(starParticleIndex);
+void AddScaledEnergyToCell(int i, MyDouble starParticleMass) {
+    int numberOfSNe = GetSNAmount(starParticleMass);
+    MyFloat logNSNe = log10(numberOfSNe);
+
+    MyFloat cellNumberDensity_in_cgs = SphP[i].Density * All.UnitMass_in_g / pow(3,(All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s)) / massOfProton_in_g;
+    MyFloat logcellNumberDensity_in_cgs = log10(cellNumberDensity_in_cgs);
+    double snMomentumToInput_in_msun_km_per_s = pow(10, -0.126 * logcellNumberDensity_in_cgs * logcellNumberDensity_in_cgs + 0.282 * logcellNumberDensity_in_cgs + 0.609 * logNSNe + 5.463); // from fitted function of cluster simulations
+    double baseValue = pow(10, -0.126 * log10(1) * log10(1) + 0.282 * log10(1) + 0.609 * log10(1) + 5.463); // 1e51 ergs when 1 SN and density = 1cm-3
+
+    double energyScaleFactor = snMomentumToInput_in_msun_km_per_s / baseValue;
+
+    // save to snap (for StarParticle)
+
+    double totalEnergyToAddInCodeUnits = snEnergyToInputInErgs * energyScaleFactor / All.UnitEnergy_in_cgs / P[i].Mass;
+    double energyToAddInCodeUnits = totalEnergyToAddInCodeUnits / amountofcellstodepositenergy;
+
+    P[i].energyAddedBySN += All.cf_atime * All.cf_atime * energyToAddInCodeUnits * P[i].Mass;
+    P[i].uthermAddedBySN += energyToAddInCodeUnits;
+    SphP[i].Utherm += energyToAddInCodeUnits;
+    SphP[i].Energy += All.cf_atime * All.cf_atime * energyToAddInCodeUnits * P[i].Mass;
+
+    set_pressure_of_cell(i);
+}
+
+void AddFlatEnergyToCell(int i, MyDouble starParticleMass){
+  int numberOfSNe = GetSNAmount(starParticleMass);
 
   double totalEnergyToAddInCodeUnits = snEnergyToInputInErgs / All.UnitEnergy_in_cgs / P[i].Mass;
   double energyToAddInCodeUnits = totalEnergyToAddInCodeUnits / amountofcellstodepositenergy;
@@ -513,17 +607,17 @@ void AddEnergyToCell(int i, int starParticleIndex){
   set_pressure_of_cell(i);
 }
 
-void AddMassToCell(int i, int starParticleIndex){
-  int numberOfSNe = GetSNAmount(starParticleIndex);
+void AddMassToCell(int i, MyDouble starParticleMass){
+  int numberOfSNe = GetSNAmount(starParticleMass);
   MyDouble totalMassEjected = numberOfSNe * massEjectedPerSN_in_g / All.UnitMass_in_g;
   MyDouble massToAddToThisCell = totalMassEjected / amountofcellstodepositenergy;
   SphP[i].OldMass += massToAddToThisCell;
-  P[starParticleIndex].Mass -= massToAddToThisCell;
+  // P[starParticleIndex].Mass -= massToAddToThisCell;
 }
 
 void AddEnergyAndMassToAllTasksClosestCells(int currentSNIndex){
 
-    int starParticleIndex = allTasks_SNStarParticleIndices[currentSNIndex];
+    MyDouble starParticleMass = allTasks_SNStarParticleMasses[currentSNIndex];
 
     for(int i = 0; i < amountofcellstodepositenergy; i++){
             
@@ -532,12 +626,19 @@ void AddEnergyAndMassToAllTasksClosestCells(int currentSNIndex){
               
             int closestCellIndex = closestCellIndices[i];
 
-#ifdef MOMENTUM_SN
-            AddMomentumToCell(closestCellIndex, starParticleIndex);
-#else
-            AddEnergyToCell(closestCellIndex, starParticleIndex);
+            AddMassToCell(closestCellIndex, starParticleMass);
+#ifdef FLAT_ENERGY_SN
+            AddFlatEnergyToCell(closestCellIndex, starParticleMass);
 #endif
-            AddMassToCell(closestCellIndex, starParticleIndex);
+#ifdef FLAT_MOMENTUM_SN
+            AddFlatMonentumToCell(closestCellIndex, starParticleMass, currentSNIndex);
+#endif
+#ifdef SCALED_ENERGY_SN
+            AddScaledEnergyToCell(closestCellIndex, starParticleMass);
+#endif
+#ifdef SCALED_MOMENTUM_SN
+            AddScaledMomentumToCell(closestCellIndex, starParticleMass, currentSNIndex);
+#endif
         }
 }
 
@@ -604,7 +705,7 @@ int get_next_sn_time()
 
   for(int i = NumGas; i < NumPart; i++)  // skip gas particles
     {
-      if(P[i].StarExploded == 1)
+      if(P[i].snCount != 0)
         continue;  // skip already exploded stars (if no more stars are left on this tast return 1e8 --> doesn't change timestep)
 
       float timeInUnitTimes = All.Ti_Current * All.Timebase_interval;

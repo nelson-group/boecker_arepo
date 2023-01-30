@@ -591,7 +591,7 @@ void init_io_fields()
   init_units(IO_SLT, 0, 0, 0, 0, 0, 0);
   init_snapshot_type(IO_SLT, SN_MINI);
 
-  init_field(IO_SE, "SE  ", "StarsExploded", MEM_INT, FILE_INT, FILE_INT, 1, A_P, &P[0].StarExploded, 0, STARS_ONLY);
+  init_field(IO_SE, "SE  ", "StarsExploded", MEM_INT, FILE_INT, FILE_INT, 1, A_P, &P[0].snCount, 0, STARS_ONLY);
   init_units(IO_SE, 0, 0, 0, 0, 0, 0);
   init_snapshot_type(IO_SE, SN_MINI);
 

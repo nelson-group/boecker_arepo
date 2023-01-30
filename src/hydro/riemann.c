@@ -91,6 +91,14 @@ double godunov_flux_3d(struct state *st_L, struct state *st_R, struct state_face
 {
   double Vel;
 
+#ifdef XENO_SN
+  #ifdef FIXERRORS
+  // printf("fixed negative density: Left: %g, Right: %g\n", st_L->rho, st_R->rho);
+if(st_L->rho < 0) st_L->rho = 0;
+if(st_R->rho < 0) st_R->rho = 0;
+  #endif
+#endif
+
 #ifndef ISOTHERM_EQS
   {
     if(st_L->press == 0 && st_R->press == 0)

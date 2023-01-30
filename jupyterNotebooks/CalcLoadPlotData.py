@@ -140,6 +140,13 @@ def getMasses(folder, timeStep):
         masses = np.array(hdf.get("PartType0/Masses"))
     return masses
 
+def getStarMasses(folder, timeStep):
+    with h5py.File(folder+"/snap_"+str(timeStep).zfill(3) +".hdf5", "r") as hdf:
+        if "PartType4" not in hdf:
+            return np.zeros(1)
+        masses = np.array(hdf.get("PartType4/Masses"))
+    return masses
+
 def getDensities(folder, timeStep):
     with h5py.File(folder+"/snap_"+str(timeStep).zfill(3) +".hdf5", "r") as hdf:
         densities = np.array(hdf.get("PartType0/Density"))
@@ -162,7 +169,8 @@ def getStarsExploded(folder, timeStep):
         except KeyError:
             starsExploded = np.zeros(1)
         else:
-            starsExploded = np.array(hdf.get("PartType4/StarsExploded"))
+            starsExploded = np.array(hdf.get("PartType4/snCount"))
+            #starsExploded = np.array(hdf.get("PartType4/StarsExploded"))
             if(starsExploded.all() == None):
                 starsExploded = np.zeros(1)
     return starsExploded

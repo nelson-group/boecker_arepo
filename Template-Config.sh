@@ -220,7 +220,12 @@
 #MESHRELAX                     # this keeps the mass constant and only regularizes the mesh
 #ADDBACKGROUNDGRID=16          # Re-grid hydrodynamics quantities on a Oct-tree AMR grid. This does not perform a simulation.
 
+#FIXERRORS
 #XENO_SN
-#MOMENTUM_SN
+#SN_TYPE=0			# 0: flat energy injection; 1: flat momentum injection; 2: scaled energy injection; 3: scaled momentum injection
+#FLAT_ENERGY_SN
+#FLAT_MOMENTUM_SN
+#SCALED_ENERGY_SN
+#SCALED_MOMENTUM_SN
 #FAKE_SN_PRESSURE_OFF
 #SN_TIMESTEPS

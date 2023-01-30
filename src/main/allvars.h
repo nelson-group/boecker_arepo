@@ -1273,7 +1273,7 @@ extern struct particle_data
   signed char TimeBinHydro;
 
 #ifdef XENO_SN
-  int StarExploded;
+  int snCount;
   float StarBirthTime;
   float StarLifeTime;
   float energyAddedBySN;
