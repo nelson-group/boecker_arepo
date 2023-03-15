@@ -895,7 +895,12 @@ static void derefine_apply_flux_list(void)
 #else  /* #ifndef LONGIDS */
           printf("On task=%d flux to ID=%llu, but this is already deleted (index p=%d)\n", ThisTask, P[p].ID, p);
 #endif /* #ifndef LONGIDS #else */
+
+#ifdef FIXERRORS
+          continue;
+#else
           terminate(buf);
+          #endif
         }
 
       P[p].Mass += FluxListGet[i].dM;

@@ -1,0 +1,13 @@
+axes.titlesize : 24
+axes.labelsize : 20
+
+lines.linewidth : 3
+lines.markersize : 30
+
+xtick.labelsize : 16
+ytick.labelsize : 16
+legend.fontsize : 12
+
+figure.dpi : 200
+figure.figsize : 13,8
+axes.prop_cycle: cycler('color', ['red', 'blue', 'green', 'cyan', 'orange', 'purple', 'olive', 'pink', 'gray'])

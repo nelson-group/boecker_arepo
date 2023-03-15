@@ -51,6 +51,7 @@ int amountofcellstodepositenergy = 8;
 
 int N_explosions = 0;
 int allTasks_N_explosions = 0;
+MyDouble thisTaskSNStarParticleMasses[1000000];
 MyDouble allTasks_SNStarParticleMasses[100000];
 float thisTaskSNPositions[1000000][3]; // space for maxSNCountPerTimestep SNe on every task
 float allTasks_SN_positions[1000000][3];
@@ -378,6 +379,9 @@ void FindClosestCellsOnThisTask(int currentSNIndex){
     // find closest cells on each task and store indices in closestCellIndices and distances in closestDistances
         for(int i = 0; i < NumGas; i++)
         {
+            if(P[i].ID == 0) continue; // cell deleted
+            if(P[i].Mass == 0) continue;
+
             // calculate distance from SN position to each gas cell
             float squareDistToCell = 0;
             for(int j = 0; j < 3; j++)
@@ -474,81 +478,60 @@ int GetSNAmount(MyDouble starParticleMass){
   return (int)numberOfSNe;
 }
 
-void AddScaledMomentumToCell(int i, MyDouble starParticleMass, currentSNIndex){
+double GetTerminalMomentum_in_msun_km_per_s(double numberDensity, int nSNe){
+  MyFloat logNSNe = log10(nSNe);
+  MyFloat logNumberDensity = log10(numberDensity);
 
-if(P[i].Mass == 0){
-  printf("SN in gas with no mass");
-  return;
+  // return pow(10, -0.126 * logNumberDensity * logNumberDensity + 0.282 * logNumberDensity + 0.609 * logNSNe + 5.463); old fit 4 params
+  return pow(10, -0.122 * logNumberDensity * logNumberDensity - 0.021 * logNumberDensity * logNSNe + 0.183 * logNumberDensity + 0.731 * logNSNe + 5.472); // new fit 5 params
 }
 
+void AddScaledMomentumToCell(int i, MyDouble starParticleMass, int currentSNIndex){
+
   int numberOfSNe = GetSNAmount(starParticleMass);
-  MyFloat logNSNe = log10(numberOfSNe);
-
   double cellNumberDensity_in_cgs = SphP[i].Density * All.UnitMass_in_g / (All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s) / (All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s) / (All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s)  / massOfProton_in_g;
-  printf("UnitDensity: %g * UnitMassInG: %g / pow(3, UnitVelIncms: %g * UnitTimeInS: %g) / protonmass: %g\n = cellNumberDensity_in_cgs: %g\n", SphP[i].Density, All.UnitMass_in_g, All.UnitVelocity_in_cm_per_s, All.UnitTime_in_s, massOfProton_in_g, cellNumberDensity_in_cgs);
-printf("pow(3, UnitVelIncms * UnitTimeInS) =  %g\n", SphP[i].Density * All.UnitMass_in_g /(All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s) / (All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s) / (All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s));
-  MyFloat logcellNumberDensity_in_cgs = log10(cellNumberDensity_in_cgs);
-  double snMomentumToInput_in_msun_km_per_s = pow(10, -0.126 * logcellNumberDensity_in_cgs * logcellNumberDensity_in_cgs + 0.282 * logcellNumberDensity_in_cgs + 0.609 * logNSNe + 5.463); // from fitted function of cluster simulations
-
-  double totalMomentumToAddInCodeUnits = snMomentumToInput_in_msun_km_per_s * sunMass_in_g / All.UnitMass_in_g * 1e5 / All.UnitVelocity_in_cm_per_s;
+  
+  double totalMomentumToAddInCodeUnits = GetTerminalMomentum_in_msun_km_per_s(cellNumberDensity_in_cgs, numberOfSNe) * sunMass_in_g / All.UnitMass_in_g * 1e5 / All.UnitVelocity_in_cm_per_s;
   double momentumToAddInCodeUnits = totalMomentumToAddInCodeUnits / amountofcellstodepositenergy;
 
-  double velocityToAddInCodeUnits = momentumToAddInCodeUnits / P[i].Mass;
+  int boostFactor = 100;
+  double velocityToAddInCodeUnits = momentumToAddInCodeUnits / P[i].Mass * boostFactor;
 
-  // print density if not in range of cluster runs, and set it in range
-  // same with velocity > 1000: print out everything
-  // terminate there and see what happened (BG grid? low mass)
-
-  printf("numberOfSNe: %d, numberDensity: %g, totalMomentumToAddInCodeUnits: %g, cellMass: %g, velocityToAddInCodeUnits: %g  \n", numberOfSNe, cellNumberDensity_in_cgs, totalMomentumToAddInCodeUnits, P[i].Mass, velocityToAddInCodeUnits);
+  // printf("numberOfSNe: %d, numberDensity: %g, totalMomentumToAddInCodeUnits: %g, cellMass: %g, velocityToAddInCodeUnits: %g  \n", numberOfSNe, cellNumberDensity_in_cgs, totalMomentumToAddInCodeUnits, P[i].Mass, velocityToAddInCodeUnits);
   
+  // printf("nSN: %d, velocityToAddInCodeUnits: %g\n", numberOfSNe, velocityToAddInCodeUnits);
 
-  int dir[3];
+  MyFloat dir[3];
   for (int j=0;j<3;j++){
     dir[j] = P[i].Pos[j] - allTasks_SN_positions[currentSNIndex][j];
   }
   MyFloat magnitude = 0;
   for (int j = 0; j < 3; j++) {
       magnitude += dir[j] * dir[j];
-      printf("magnitude[%d]: %g\n", j, magnitude);
   }
-  printf("sqrmagnitude: %g\n", magnitude);
   magnitude = sqrt(magnitude);
 
   for (int j = 0; j < 3; j++) {
-      printf("before: dir[%d]: %g\n", j, dir[j]);
-  }
-  printf("magnitude: %g\n", magnitude);
-
-  printf("Velocity before: x=%g, y=%g, z=%g\n", P[i].Vel[0], P[i].Vel[1], P[i].Vel[2]);
-
-  for (int j = 0; j < 3; j++) {
       dir[j] = dir[j] / magnitude;
-      printf("dir[%d]: %g\n", j, dir[j]);
       P[i].Vel[j] += dir[j] * velocityToAddInCodeUnits;
+      // printf("P.Vel[%d] = %g", j, P[i].Vel[j]);
   }
-  printf("Velocity after: x=%g, y=%g, z=%g\n", P[i].Vel[0], P[i].Vel[1], P[i].Vel[2]);
-terminate("asfasfd");
+
 }
 
 void AddFlatMonentumToCell(int i, MyDouble starParticleMass, int currentSNIndex) {
+
   int numberOfSNe = GetSNAmount(starParticleMass);
 
   double totalMomentumToAddInCodeUnits = snMomentumToInput_in_msun_km_per_s * sunMass_in_g / All.UnitMass_in_g * 1e5 / All.UnitVelocity_in_cm_per_s;
   double momentumToAddInCodeUnits = totalMomentumToAddInCodeUnits / amountofcellstodepositenergy;
 
-  double velocityToAddInCodeUnits = momentumToAddInCodeUnits / P[i].Mass;
+  int boostFactor = 1;
+  double velocityToAddInCodeUnits = momentumToAddInCodeUnits / P[i].Mass * boostFactor;
 
   velocityToAddInCodeUnits *= numberOfSNe;
 
-  // print density if not in range of cluster runs, and set it in range
-  // same with velocity > 1000: print out everything
-  // terminate there and see what happened (BG grid? low mass)
-
-  printf("numberOfSNe: %d", numberOfSNe);
-  printf("totalMomentumToAddInCodeUnits: %g \n", totalMomentumToAddInCodeUnits);
-  printf("velocityToAddInCodeUnits: %g \n", velocityToAddInCodeUnits);
-
-  int dir[3];
+  MyFloat dir[3];
   for (int j=0;j<3;j++){
     dir[j] = P[i].Pos[j] - allTasks_SN_positions[currentSNIndex][j];
   }
@@ -558,31 +541,29 @@ void AddFlatMonentumToCell(int i, MyDouble starParticleMass, int currentSNIndex)
   }
   magnitude = sqrt(magnitude);
 
-  printf("Velocity before: x=%g, y=%g, z=%g\n", P[i].Vel[0], P[i].Vel[1], P[i].Vel[2]);
-
   for (int j = 0; j < 3; j++) {
       dir[j] = dir[j] / magnitude;
       P[i].Vel[j] += dir[j] * velocityToAddInCodeUnits;
   }
-  printf("Velocity after: x=%g, y=%g, z=%g\n", P[i].Vel[0], P[i].Vel[1], P[i].Vel[2]);
 
 }
 
 void AddScaledEnergyToCell(int i, MyDouble starParticleMass) {
+  
     int numberOfSNe = GetSNAmount(starParticleMass);
-    MyFloat logNSNe = log10(numberOfSNe);
 
-    MyFloat cellNumberDensity_in_cgs = SphP[i].Density * All.UnitMass_in_g / pow(3,(All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s)) / massOfProton_in_g;
-    MyFloat logcellNumberDensity_in_cgs = log10(cellNumberDensity_in_cgs);
-    double snMomentumToInput_in_msun_km_per_s = pow(10, -0.126 * logcellNumberDensity_in_cgs * logcellNumberDensity_in_cgs + 0.282 * logcellNumberDensity_in_cgs + 0.609 * logNSNe + 5.463); // from fitted function of cluster simulations
-    double baseValue = pow(10, -0.126 * log10(1) * log10(1) + 0.282 * log10(1) + 0.609 * log10(1) + 5.463); // 1e51 ergs when 1 SN and density = 1cm-3
+    double cellNumberDensity_in_cgs = SphP[i].Density * All.UnitMass_in_g / (All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s) / (All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s) / (All.UnitVelocity_in_cm_per_s * All.UnitTime_in_s) / massOfProton_in_g;
+    
+    double baseValue = GetTerminalMomentum_in_msun_km_per_s(1, 1);
 
-    double energyScaleFactor = snMomentumToInput_in_msun_km_per_s / baseValue;
-
-    // save to snap (for StarParticle)
+    double energyScaleFactor = GetTerminalMomentum_in_msun_km_per_s(cellNumberDensity_in_cgs, numberOfSNe) / baseValue;
+    
+    // printf("numberOfSNe: %d, energyScaleFactor: %g\n", numberOfSNe, energyScaleFactor);
 
     double totalEnergyToAddInCodeUnits = snEnergyToInputInErgs * energyScaleFactor / All.UnitEnergy_in_cgs / P[i].Mass;
-    double energyToAddInCodeUnits = totalEnergyToAddInCodeUnits / amountofcellstodepositenergy;
+
+    int boostFactor = 10;
+    double energyToAddInCodeUnits = totalEnergyToAddInCodeUnits / amountofcellstodepositenergy * boostFactor;
 
     P[i].energyAddedBySN += All.cf_atime * All.cf_atime * energyToAddInCodeUnits * P[i].Mass;
     P[i].uthermAddedBySN += energyToAddInCodeUnits;
@@ -593,6 +574,7 @@ void AddScaledEnergyToCell(int i, MyDouble starParticleMass) {
 }
 
 void AddFlatEnergyToCell(int i, MyDouble starParticleMass){
+
   int numberOfSNe = GetSNAmount(starParticleMass);
 
   double totalEnergyToAddInCodeUnits = snEnergyToInputInErgs / All.UnitEnergy_in_cgs / P[i].Mass;
@@ -611,8 +593,8 @@ void AddMassToCell(int i, MyDouble starParticleMass){
   int numberOfSNe = GetSNAmount(starParticleMass);
   MyDouble totalMassEjected = numberOfSNe * massEjectedPerSN_in_g / All.UnitMass_in_g;
   MyDouble massToAddToThisCell = totalMassEjected / amountofcellstodepositenergy;
-  SphP[i].OldMass += massToAddToThisCell;
-  // P[starParticleIndex].Mass -= massToAddToThisCell;
+  P[i].Mass += massToAddToThisCell;
+  // P[starParticleIndex].Mass -= massToAddToThisCell; // starParticleIndex cant be used, because star might be on other task
 }
 
 void AddEnergyAndMassToAllTasksClosestCells(int currentSNIndex){

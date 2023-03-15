@@ -92,9 +92,9 @@ def SetUnitSystem(_UnitVelocity_in_cm_per_s = -1, _UnitLength_in_cm = -1, _UnitM
 
 def LoadAnalyticalSolutions(nSN = 1):
     if(nSN == 1):
-        with h5py.File("analyticalSolution/maxRadVelData_80k_years_1_star_n0_1.hdf5", "r") as hdf:
-            radVelData = np.array(hdf.get("Data/RadVels_n0_1"))
-            timeData = np.array(hdf.get("Data/Times_n0_1"))
+        with h5py.File("/vera/u/xboecker/arepo/jupyterNotebooks/analyticalSolution/maxRadVelData_80k_years.hdf5", "r") as hdf:
+            radVelData = np.array(hdf.get("Data/RadVels"))
+            timeData = np.array(hdf.get("Data/Times")) * 10
         return timeData, radVelData
         #with h5py.File("analyticalSolution/maxRadVelData_80k_years_1e51erg_p_1e-1.hdf5", "r") as hdf:
         #    radVelData = np.array(hdf.get("Data/RadVelsp1e-1"))
@@ -122,9 +122,9 @@ def LoadAnalyticalSolutions(nSN = 1):
         
 # Load Data
 
-def LoadDataFromHDF(folder, timeStep, dataName):
+def LoadDataFromHDF(folder, timeStep, dataName, partType = "PartType0"):
     with h5py.File(folder+"/snap_"+str(timeStep).zfill(3) +".hdf5", "r") as hdf:
-        data = np.array(hdf.get("PartType0/"+dataName))
+        data = np.array(hdf.get(partType+"/"+dataName))
     return data
 
 def getVelocities(folder, timeStep):
@@ -397,6 +397,60 @@ def getTotalSFR(folder, timeStep): # SFR
 
 
 
+def getTotalOutflowMass(folder, timeStep):
+    velocities = getVelocities(folder, timeStep)
+    coos = getCoos(folder, timeStep)
+    masses = getMasses(folder, timeStep)
+    
+    xy_velocity_mag = np.sqrt(velocities[:, 0]**2 + velocities[:, 1]**2)
+    
+    upperOutflowIndices = np.where((velocities[:, 2] > xy_velocity_mag) & (coos[:, 2] > 100))
+    upperOutflowMass_sum = np.sum(masses[upperOutflowIndices])
+    
+    lowerOutflowIndices = np.where((velocities[:, 2] < -xy_velocity_mag) & (coos[:, 2] < 100))
+    lowerOutflowMass_sum = np.sum(masses[lowerOutflowIndices])
+    
+    totalOutflowMass_sum = upperOutflowMass_sum + lowerOutflowMass_sum
+    
+    return totalOutflowMass_sum
+
+def getTotalInflowMass(folder, timeStep):
+    velocities = getVelocities(folder, timeStep)
+    coos = getCoos(folder, timeStep)
+    masses = getMasses(folder, timeStep)
+    
+    xy_velocity_mag = np.sqrt(velocities[:, 0]**2 + velocities[:, 1]**2)
+    
+    upperInflowIndices = np.where((velocities[:, 2] < -xy_velocity_mag) & (coos[:, 2] > 100))
+    upperInflowMass_sum = np.sum(masses[upperInflowIndices])
+    
+    lowerInflowIndices = np.where((velocities[:, 2] > xy_velocity_mag) & (coos[:, 2] < 100))
+    lowerInflowMass_sum = np.sum(masses[lowerInflowIndices])
+    
+    totalInflowMass_sum = upperInflowMass_sum + lowerInflowMass_sum
+    
+    return totalInflowMass_sum
+
+
+def getTotalOutflowMinusInflow(folder, timeStep):
+    outflow = getTotalOutflowMass(folder, timeStep)
+    inflow = getTotalInflowMass(folder, timeStep)
+    outflowMinusInflow = outflow - inflow
+    
+    return outflowMinusInflow
+
+def getTotalDiskMass(folder, timeStep):
+    masses = getMasses(folder, timeStep)
+    coos = getCoos(folder, timeStep)
+    starMasses = getStarMasses(folder, timeStep)
+    
+    diskIndices = np.where((coos[:,2] < 114) & (coos[:,2] > 96) & (np.sqrt((coos[:,0]-100)**2 + (coos[:,1]-100)**2) < 25))
+    
+    diskMasses = masses[diskIndices]
+    
+    return np.sum(diskMasses) + np.sum(starMasses)
+
+
 
 
 
@@ -412,7 +466,10 @@ def calculateOrLoadData(folder, folderName, dataName, calcDataOfOneSnapShotFunct
             dh = display(0,display_id=True)
             
             for timeStep in range(frameAmount):
-                newData[timeStep] = calcDataOfOneSnapShotFunction(folder, timeStep)
+                if(timeStep < len(data)):
+                    newData[timeStep] = data[timeStep]
+                else:
+                    newData[timeStep] = calcDataOfOneSnapShotFunction(folder, timeStep)
                 dh.update(timeStep)
                 np.savetxt("/vera/u/xboecker/jupyterNotebooksOutputs/data/"+dataName+folderName, newData)
             return newData
@@ -436,14 +493,20 @@ def calculateOrLoadData(folder, folderName, dataName, calcDataOfOneSnapShotFunct
         return data
     
 
-def PlotData(data, folderNames, title, ylabel, dataName, unit_conversion_factor, frameAmount, frameNbrMultiplier, TimeBetSnapshot_in_unit_time, xlabel = "time [yr]", compareToAnalyticVelocities = False, compareToAnalyticRadius = False):
+def PlotData(data, folderNames, title, ylabel, dataName, unit_conversion_factor, frameAmount, frameNbrMultiplier, TimeBetSnapshot_in_unit_time, xScaleLog = False, xlabel = "time [yr]", legendLabels = [""], compareToAnalyticVelocities = False, compareToAnalyticRadius = False):
     plt.clf()
     
     TimeBetSnapshot_in_s = TimeBetSnapshot_in_unit_time * UnitTime_in_s
     TimeBetSnapshot_in_yr = TimeBetSnapshot_in_s * sec_to_yr
     timeScaleToYears = np.linspace(0,TimeBetSnapshot_in_yr*(frameAmount-1),frameAmount)
 
+    if(xScaleLog):
+        #print(timeScaleToYears[1:frameAmount])
+        timeScaleToYears = np.log10(timeScaleToYears[1:frameAmount] / 1e6)
+        timeScaleToYears = np.append(timeScaleToYears[0], timeScaleToYears)
+        xlabel = "time [log10(Myr)]"
     
+    print(timeScaleToYears)
     for i in range(len(folderNames)):
         plt.plot(timeScaleToYears[1:frameAmount]*frameNbrMultiplier, data[i][1:frameAmount] * unit_conversion_factor, label=folderNames[i])
     
@@ -457,18 +520,25 @@ def PlotData(data, folderNames, title, ylabel, dataName, unit_conversion_factor,
 
     plt.yscale("log")
     plt.title(title)
-    plt.legend()
+    
+    if(legendLabels == [""]):
+        plt.legend()
+    else:
+        plt.legend(legendLabels)
+    plt.style.use('./my_style.mplstyle')
     #plt.legend(["1 star center", "10 stars center", "100 stars center", "10 stars flat dist", "100 stars flat dist", "analytical 1 SN", "analytical 10 SNe", "analytical 100 SNe"])
     #plt.legend(["1 star", "10 stars r=10pc", "10 stars t=5kyr", "10 stars r=10pc t=5kyr"])
     plt.xlabel(xlabel)
     #plt.ylabel("Max velocity ["+str(round(UnitVelocity_in_km_per_s))+ " km/s]")
     plt.ylabel(ylabel)
-    fig = plt.figure()#figsize=(16.18 * 2, 10 * 2))
+    #fig = plt.figure()#figsize=(16.18 * 2, 10 * 2))
     #fig.set_dpi(150.0)
     #fig.patch.set_facecolor('xkcd:mint green')
     saveName = "/vera/u/xboecker/jupyterNotebooksOutputs/plots/"+dataName
     for i in range(len(folderNames)):
         saveName += "-"+folderNames[i]
+        
+    saveName += ".png"
     plt.savefig(saveName)#, facecolor='w')
 
     plt.show()
