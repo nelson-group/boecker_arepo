@@ -19,3 +19,5 @@ The following `Config.sh` options are added:
 #SCALED_ENERGY_SN
 #SCALED_MOMENTUM_SN
 ```
+
+See analysis and visualization routines in the `jupyterNotebooks/` directory.
