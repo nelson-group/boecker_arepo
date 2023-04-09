@@ -7,11 +7,15 @@ cosmological background. It is a flexible code that can be
 applied to a variety of different types of simulations, offering
 a number of sophisticated simulation algorithms.
 
-This mirror of AREPO is intended for use with ArepoVTK.
+This version of AREPO includes a supernova feedback model, based on the BSc thesis of Xeno Boecker at Heidelberg University (2023).
 
-Note that without the `AREPOVTK` compile time option, this code is identical to the public version.
+The following `Config.sh` options are added:
 
-The master repository of the AREPO public codebase is:
-
-https://gitlab.mpcdf.mpg.de/vrs/arepo
-
+```
+#XENO_SN
+#SN_TYPE=0	# 0: flat energy injection; 1: flat momentum injection; 2: scaled energy injection; 3: scaled momentum injection
+#FLAT_ENERGY_SN
+#FLAT_MOMENTUM_SN
+#SCALED_ENERGY_SN
+#SCALED_MOMENTUM_SN
+```
